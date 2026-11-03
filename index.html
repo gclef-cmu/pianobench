@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="PianoBench: Evaluating Musical Perception and Reasoning in Language Models. Paper, benchmark examples, and the PianoTalk dataset.">
+  <title>PianoBench: Evaluating Musical Perception and Reasoning in Language Models</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans:400,700%7CNoto+Sans:400,400i,500,600,700&amp;display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="benchmark.js"></script>
+  <script type="module" src="dataset.js"></script>
+  <script type="module" src="page.js"></script>
+</head>
+<body>
+  <main id="main">
+    <header class="paper-header">
+      <h1><strong>PianoBench:</strong> Evaluating Musical Perception and Reasoning in Language Models</h1>
+      <p class="authors"><span>Louis Bradshaw<sup>1</sup>,</span> <span>Irmak Bukey<sup>2</sup>,</span> <span>Daniel Chenyu Lin<sup>3</sup>,</span> <span>John Thickstun<sup>3</sup>,</span> <span>Chris Donahue<sup>2</sup></span></p>
+      <p class="affiliations"><span><sup>1</sup> Queen Mary University of London</span> <span><sup>2</sup> Carnegie Mellon University</span> <span><sup>3</sup> Cornell University</span></p>
+      <div class="resource-links" aria-label="Research resources">
+        <a href="https://arxiv.org/abs/2611.03839"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2h8l4 4v12H4zM12 2v5h4M7 10h6M7 13h6"/></svg>Paper</a>
+        <a href="https://huggingface.co/datasets/gclef-cmu/pianotalk"><img src="assets/huggingface.svg" width="20" height="20" alt="">PianoTalk Dataset</a>
+        <a href="https://huggingface.co/datasets/gclef-cmu/pianobench"><img src="assets/huggingface.svg" width="20" height="20" alt="">PianoBench Benchmark</a>
+      </div>
+    </header>
+
+    <section id="overview" aria-labelledby="overview-heading">
+      <h2 id="overview-heading">Overview</h2>
+      <figure>
+        <a href="assets/overview.svg" aria-label="Open the paper overview figure at full size"><img class="overview-figure" src="assets/overview.svg" width="1440" height="600" alt="PianoTalk is constructed by separating and transcribing speech and piano from instructional videos. PianoBench uses this data to evaluate the same musical passages as audio, symbolic note events, or no musical input. The figure compares Gemma and Gemini across audio and symbolic inputs, and interleaved versus separated mid-training on PianoTalk."></a>
+      </figure>
+      <p><a href="https://huggingface.co/datasets/gclef-cmu/pianobench"><strong>PianoBench</strong></a> contains 250 human-verified
+      multiple-choice questions about short piano passages, presented as audio or a text
+      encoding of their MIDI transcription (MIDI-text). Open-weight audio-language
+      models such as Qwen 3 Omni, Gemma 4, Audio Flamingo, and Music Flamingo
+      struggle with these questions, achieving at most 52.8% accuracy on audio.
+      When given MIDI-text, language models benefit substantially from
+      chain-of-thought reasoning: Qwen 3.5 9B improves from 50% to 70%, and
+      frontier models reach 93.2%.
+      <a href="https://huggingface.co/datasets/gclef-cmu/pianotalk"><strong>PianoTalk</strong></a> provides training data for learning these
+      connections between musical notes and the concepts used to describe them.
+      It contains over 20,000 hours of interleaved commentary and piano
+      transcripts from instructional videos. Mid-training Qwen 3.5 9B on this
+      data improves PianoBench accuracy on MIDI-text without chain-of-thought
+      reasoning to 56.0%, compared with 42.4% when training on the same
+      commentary and music separately.</p>
+    </section>
+
+    <section id="dataset" aria-labelledby="dataset-heading">
+      <h2 id="dataset-heading">PianoTalk Dataset Explorer</h2>
+      <p>Use the interactive viewer to explore example videos from PianoTalk. Click the timeline to jump to a moment in the video and follow the aligned captions and MIDI piano transcription. Both may contain errors. The captions shown here are from YouTube. We also provide speech transcriptions generated with NVIDIA’s Parakeet model on <a href="https://huggingface.co/datasets/gclef-cmu/pianotalk">Hugging Face</a>.</p>
+      <div class="dataset-viewer">
+<nav class="example-nav" aria-label="PianoTalk dataset examples"><button id="previous-sample" disabled>Previous</button><span id="dataset-progress" aria-live="polite">Loading examples…</span><button id="next-sample" disabled>Next</button></nav><p id="dataset-error" role="status"></p>
+<div class="video-panel" aria-label="YouTube video">
+        <div id="youtube-player"><div class="video-placeholder"><p>Loading YouTube video…</p><a id="video-source" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">Open source video on YouTube ↗</a></div></div>
+      </div>
+
+      <div class="transport" aria-label="Playback controls">
+        <div class="transport-action">
+          <button id="play-button" class="play-button" type="button" aria-label="Play" disabled>
+            <span class="play-icon" aria-hidden="true"></span>
+            <span id="play-label" class="visually-hidden">Play</span>
+          </button>
+          <span id="current-time" class="time">0:00</span>
+        </div>
+        <div class="transport-timeline">
+          <div id="activity-overview" class="activity-overview">
+            <span class="activity-name speech-activity-name">Speech</span>
+            <span class="activity-name piano-activity-name">Piano</span>
+            <div class="activity-map-wrap">
+              <canvas id="activity-map" aria-hidden="true"></canvas>
+              <input
+                id="seek"
+                class="activity-seek"
+                type="range"
+                min="0"
+                max="1"
+                value="0"
+                step="0.1"
+                aria-label="Playback position"
+              />
+            </div>
+            <output id="speech-rate" class="activity-rate speech-activity-rate">0.0 words/s</output>
+            <output id="piano-rate" class="activity-rate piano-activity-rate">0.0 notes/s</output>
+          </div>
+          <div class="timeline-scale" aria-hidden="true">
+            <div class="timeline-scale-range">
+              <span>0:00</span>
+              <span id="duration">0:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-panel speech-panel" aria-labelledby="speech-heading">
+        <header class="panel-header">
+          <div>
+            
+            <h3 id="speech-heading">Speech</h3>
+          </div>
+          <p hidden><span id="speech-count">0</span> contiguous regions</p>
+        </header>
+        <p id="caption-readout" class="caption-readout" aria-live="polite">No speech at this point.</p>
+      </div>
+
+      <div class="timeline-panel piano-panel" aria-labelledby="piano-heading">
+        <header class="panel-header">
+          <div>
+            
+            <h3 id="piano-heading">Piano transcription</h3>
+          </div>
+          <p hidden><span id="piano-count">0</span> contiguous regions · <span id="note-count">0</span> notes</p>
+        </header>
+        <canvas id="piano-roll" aria-label="Scrolling MIDI piano roll"></canvas>
+        <canvas id="piano-keyboard" aria-label="Piano keyboard showing currently pressed notes"></canvas>
+        <div id="piano-pedal" class="piano-pedal" role="status" aria-label="Sustain pedal released">
+          <span class="pedal-light" aria-hidden="true"></span>
+          <span>Sustain</span>
+        </div>
+      </div>
+
+      </div>
+    </section>
+
+    <section id="benchmark" aria-labelledby="benchmark-heading">
+      <h2 id="benchmark-heading">PianoBench Explorer</h2>
+      <p>Use the interactive viewer to explore example questions from PianoBench. The audio contains a Pianoteq rendering of the piano transcription used for each question.</p>
+      <p id="benchmark-error" class="error" role="status"></p>
+      <div id="benchmark-viewer" hidden>
+        <nav class="example-nav" aria-label="PianoBench examples">
+          <button id="previous-question" type="button" disabled>Previous</button>
+          <span id="question-progress" aria-live="polite"></span>
+          <button id="next-question" type="button" disabled>Next</button>
+        </nav>
+        <h3 id="question"></h3>
+        <audio id="question-audio" controls preload="metadata"></audio>
+        <fieldset id="choices"><legend class="visually-hidden">Choose an answer</legend></fieldset>
+        <button id="reveal" type="button" aria-expanded="false" aria-controls="answer">Show reference answer</button>
+        <div id="answer" hidden><p id="reference-answer"></p><p id="selection-feedback" aria-live="polite"></p></div>
+      </div>
+    </section>
+    <section id="citation" aria-labelledby="citation-heading">
+      <h2 id="citation-heading">Citation</h2>
+      <div class="citation-box">
+        <button id="copy-citation" type="button" aria-label="Copy BibTeX citation">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7" y="7" width="10" height="11" rx="1.5"/><path d="M13 7V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4"/></svg>
+          <span id="copy-citation-label">copy</span>
+        </button>
+        <pre class="citation-code"><code id="citation-text">@article{bradshaw2026pianobenchevaluatingmusicalperception,
+  title = {PianoBench: Evaluating Musical Perception and Reasoning in Language Models},
+  author = {Louis Bradshaw and Irmak Bukey and Daniel Chenyu Lin and John Thickstun and Chris Donahue},
+  year = {2026},
+  eprint = {2611.03839},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.SD},
+  url = {https://arxiv.org/abs/2611.03839},
+}</code></pre>
+      </div>
+      <p id="citation-status" class="visually-hidden" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>
